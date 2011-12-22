@@ -121,8 +121,8 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 	}
 	if (sc->nr_to_scan > 0)
 		lowmem_print(3, "lowmem_shrink %lu, %x, ofree %d %d, ma %d\n",
-			     sc->nr_to_scan, sc->gfp_mask, other_free, other_file,
-			     min_adj);
+				sc->nr_to_scan, sc->gfp_mask, other_free,
+				other_file, min_adj);
 	rem = global_page_state(NR_ACTIVE_ANON) +
 		global_page_state(NR_ACTIVE_FILE) +
 		global_page_state(NR_INACTIVE_ANON) +
