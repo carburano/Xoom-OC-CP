@@ -426,6 +426,8 @@ static int mmc_read_ext_csd(struct mmc_card *card, u8 *ext_csd)
 		ext_csd[EXT_CSD_CACHE_SIZE + 2] << 16 |
 		ext_csd[EXT_CSD_CACHE_SIZE + 3] << 24;
 
+	/* AKA SUPER PAGE SIZE */
+	card->ext_csd.acc_size = ext_csd[EXT_CSD_ACC_SIZE];
 out:
 	return err;
 }
@@ -514,6 +516,8 @@ MMC_DEV_ATTR(serial, "0x%08x\n", card->cid.serial);
 MMC_DEV_ATTR(enhanced_area_offset, "%llu\n",
 		card->ext_csd.enhanced_area_offset);
 MMC_DEV_ATTR(enhanced_area_size, "%u\n", card->ext_csd.enhanced_area_size);
+// Super-page size = 512 * (2 ** (SUPER_PAGE_SIZE - 1))
+MMC_DEV_ATTR(acc_size, "%u\n", 512 << (card->ext_csd.acc_size - 1));
 
 static struct attribute *mmc_std_attrs[] = {
 	&dev_attr_cid.attr,
@@ -529,6 +533,7 @@ static struct attribute *mmc_std_attrs[] = {
 	&dev_attr_serial.attr,
 	&dev_attr_enhanced_area_offset.attr,
 	&dev_attr_enhanced_area_size.attr,
+	&dev_attr_acc_size.attr,
 	NULL,
 };
 

@@ -82,6 +82,7 @@ struct mmc_ext_csd {
 	u8			raw_sec_feature_support;/* 231 */
 	u8			raw_trim_mult;		/* 232 */
 	u8			raw_sectors[4];		/* 212 - 4 bytes */
+	u8			acc_size;		/* 225 */
 };
 
 struct sd_scr {
