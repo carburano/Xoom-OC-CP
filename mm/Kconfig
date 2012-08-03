@@ -340,6 +340,19 @@ choice
 	  benefit.
 endchoice
 
+config	VM_MAX_READAHEAD
+	  int
+	  default "128"
+	  help
+	    Set default for VM_MAX_READAHEAD in include/linux/mm.h
+
+config	VM_MIN_READAHEAD
+	  int
+	  default "32" if MACH_STINGRAY
+	  default "16"
+	  help
+	    Set default for VM_MIN_READAHEAD in include/linux/mm.h
+
 #
 # UP and nommu archs use km based percpu allocator
 #
