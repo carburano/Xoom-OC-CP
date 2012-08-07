@@ -342,6 +342,7 @@ endchoice
 
 config	VM_MAX_READAHEAD
 	  int
+	  default "512" if MACH_STINGRAY
 	  default "128"
 	  help
 	    Set default for VM_MAX_READAHEAD in include/linux/mm.h
