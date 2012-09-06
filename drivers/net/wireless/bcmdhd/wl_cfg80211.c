@@ -188,6 +188,8 @@ static s32 wl_cfg80211_get_key(struct wiphy *wiphy, struct net_device *dev,
 static s32 wl_cfg80211_config_default_mgmt_key(struct wiphy *wiphy,
 	struct net_device *dev,	u8 key_idx);
 static s32 wl_cfg80211_resume(struct wiphy *wiphy);
+static s32 wl_cfg80211_mgmt_tx_cancel_wait(struct wiphy *wiphy,
+	struct net_device *dev, u64 cookie);
 #if LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 39)
 static s32 wl_cfg80211_suspend(struct wiphy *wiphy, struct cfg80211_wowlan *wow);
 #else
@@ -952,7 +954,7 @@ wl_cfg80211_del_virtual_iface(struct wiphy *wiphy, struct net_device *dev)
 				struct net_device *ndev = wl_to_prmry_ndev(wl);
 				WL_ERR(("Firmware returned an error (%d) from p2p_ifdel"
 					"HANG Notification sent to %s\n", ret, ndev->name));
-				wl_cfg80211_hang(ndev, WLAN_REASON_UNSPECIFIED);
+				wl_cfg80211_hang(ndev, WLAN_REASON_DRIVER_ERROR);
 			}
 
 			/* Wait for any pending scan req to get aborted from the sysioc context */
@@ -1585,6 +1587,7 @@ __wl_cfg80211_scan(struct wiphy *wiphy, struct net_device *ndev,
 	/* Arm scan timeout timer */
 	mod_timer(&wl->scan_timeout, jiffies + msecs_to_jiffies(WL_SCAN_TIMER_INTERVAL_MS));
 	iscan_req = false;
+	wl->scan_request = request;
 	if (request) {		/* scan bss */
 		ssids = request->ssids;
 		if (wl->iscan_on && (!ssids || !ssids->ssid_len || request->n_ssids != 1)) {
@@ -1665,7 +1668,6 @@ __wl_cfg80211_scan(struct wiphy *wiphy, struct net_device *ndev,
 		/* we don't do iscan in ibss */
 		ssids = this_ssid;
 	}
-	wl->scan_request = request;
 	wl_set_drv_status(wl, SCANNING, ndev);
 	if (iscan_req) {
 		err = wl_do_iscan(wl, request);
@@ -2663,7 +2665,7 @@ wl_cfg80211_config_default_key(struct wiphy *wiphy, struct net_device *dev,
 		WL_ERR(("WLC_GET_WSEC error (%d)\n", err));
 		return err;
 	}
-	if (wsec & WEP_ENABLED) {
+	if (wsec == WEP_ENABLED) {
 		/* Just select a new current key */
 		index = (u32) key_idx;
 		index = htod32(index);
@@ -4582,6 +4584,7 @@ static struct cfg80211_ops wl_cfg80211_ops = {
 	.set_channel = wl_cfg80211_set_channel,
 	.set_beacon = wl_cfg80211_add_set_beacon,
 	.add_beacon = wl_cfg80211_add_set_beacon,
+	.mgmt_tx_cancel_wait = wl_cfg80211_mgmt_tx_cancel_wait,
 #ifdef WL_SCHED_SCAN
 	.sched_scan_start = wl_cfg80211_sched_scan_start,
 	.sched_scan_stop = wl_cfg80211_sched_scan_stop,
@@ -4651,6 +4654,10 @@ static s32 wl_setup_wiphy(struct wireless_dev *wdev, struct device *sdiofunc_dev
 		WIPHY_FLAG_4ADDR_STATION;
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 2, 0)
 	/* wdev->wiphy->flags |= WIPHY_FLAG_SUPPORTS_FW_ROAM; */
+#endif
+#if LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 39)
+	/* AP_SME flag can be advertised to remove patch from wpa_supplicant */
+	wdev->wiphy->flags |= WIPHY_FLAG_HAVE_AP_SME;
 #endif
 	WL_DBG(("Registering custom regulatory)\n"));
 	wdev->wiphy->flags |= WIPHY_FLAG_CUSTOM_REGULATORY;
@@ -4780,29 +4787,6 @@ static s32 wl_inform_single_bss(struct wl_priv *wl, struct wl_bss_info *bi)
 
 	signal = notif_bss_info->rssi * 100;
 
-#if defined(WLP2P) && defined(WL_ENABLE_P2P_IF)
-	if (wl->p2p && wl->p2p_net && wl->scan_request &&
-		((wl->scan_request->dev == wl->p2p_net) ||
-		(wl->scan_request->dev == wl_to_p2p_bss_ndev(wl, P2PAPI_BSSCFG_CONNECTION)))){
-#else
-	if (p2p_is_on(wl) && ( p2p_scan(wl) ||
-		(wl->scan_request->dev == wl_to_p2p_bss_ndev(wl, P2PAPI_BSSCFG_CONNECTION)))) {
-#endif
-		/* find the P2PIE, if we do not find it, we will discard this frame */
-		wifi_p2p_ie_t * p2p_ie;
-		if ((p2p_ie = wl_cfgp2p_find_p2pie((u8 *)beacon_proberesp->variable,
-			wl_get_ielen(wl))) == NULL) {
-			WL_ERR(("Couldn't find P2PIE in probe response/beacon\n"));
-			kfree(notif_bss_info);
-			return err;
-		}
-		else if( wl_cfgp2p_retreive_p2pattrib(p2p_ie, P2P_SEID_DEV_INFO) == NULL)
-		{
-			WL_DBG(("Couldn't find P2P_SEID_DEV_INFO in probe response/beacon\n"));
-			kfree(notif_bss_info);
-			return err;
-		}
-	}
 	if (!mgmt->u.probe_resp.timestamp) {
 		struct timespec ts;
 
@@ -5472,7 +5456,7 @@ wl_bss_connect_done(struct wl_priv *wl, struct net_device *ndev,
 			conn_info->req_ie_len,
 			conn_info->resp_ie,
 			conn_info->resp_ie_len,
-			completed ? WLAN_STATUS_SUCCESS : WLAN_STATUS_AUTH_TIMEOUT,
+			completed ? WLAN_STATUS_SUCCESS : e->reason,
 			GFP_KERNEL);
 		if (completed)
 			WL_INFO(("Report connect result - connection succeeded\n"));
@@ -7847,4 +7831,11 @@ int wl_cfg80211_do_driver_init(struct net_device *net)
 void wl_cfg80211_enable_trace(int level)
 {
 	wl_dbg_level |= WL_DBG_DBG;
+}
+
+static s32
+wl_cfg80211_mgmt_tx_cancel_wait(struct wiphy *wiphy,
+	struct net_device *dev, u64 cookie)
+{
+	return 0;
 }
