@@ -346,7 +346,9 @@ static int tegra_cpu_init(struct cpufreq_policy *policy)
 	if (policy->cpu == 0) {
 		register_pm_notifier(&tegra_cpu_pm_notifier);
 	}
-
+#ifdef CONFIG_MACH_STINGRAY
+	policy->max = 1000000;
+#endif
 	return 0;
 }
 
