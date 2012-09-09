@@ -82,6 +82,10 @@ static int throttle_next_index;
 static struct delayed_work throttle_work;
 static struct workqueue_struct *workqueue;
 
+#ifdef COFNIG_MACH_STINGRAY
+static bool cold_boot = true;
+#endif
+
 #define tegra_cpu_is_throttling() (is_throttling)
 
 static void tegra_throttle_work_func(struct work_struct *work)
@@ -347,7 +351,10 @@ static int tegra_cpu_init(struct cpufreq_policy *policy)
 		register_pm_notifier(&tegra_cpu_pm_notifier);
 	}
 #ifdef CONFIG_MACH_STINGRAY
-	policy->max = 1000000;
+	if (cold_boot) {
+		policy->max = 1000000;
+		cold_boot = false;
+	}
 #endif
 	return 0;
 }
