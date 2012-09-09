@@ -82,7 +82,7 @@ static int throttle_next_index;
 static struct delayed_work throttle_work;
 static struct workqueue_struct *workqueue;
 
-#ifdef COFNIG_MACH_STINGRAY
+#ifdef CONFIG_MACH_STINGRAY
 static bool cold_boot = true;
 #endif
 
