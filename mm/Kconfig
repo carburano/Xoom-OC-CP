@@ -341,15 +341,13 @@ choice
 endchoice
 
 config	VM_MAX_READAHEAD
-	  int
-	  default "512" if MACH_STINGRAY
+	  int "Maximum I/O readahead, in KB"
 	  default "128"
 	  help
 	    Set default for VM_MAX_READAHEAD in include/linux/mm.h
 
 config	VM_MIN_READAHEAD
-	  int
-	  default "32" if MACH_STINGRAY
+	  int "Minimum I/O readahead (including current page), in KB"
 	  default "16"
 	  help
 	    Set default for VM_MIN_READAHEAD in include/linux/mm.h
