@@ -65,6 +65,14 @@ config CGROUP_BFQIO
 	  filesystem interface.  The name of the subsystem will be
 	  bfqio.
 
+config IOSCHED_SIO
+	tristate "SIO I/O scheduler"
+	depends on EXPERIMENTAL
+	default y
+	---help---
+	  Simple IO scheduler based on Noop, Deadline and V(R) IO schedulers.
+	  Copyright (C) 2012 Miguel Boton <mboton@gmail.com>
+
 choice
 	prompt "Default I/O scheduler"
 	default DEFAULT_CFQ
@@ -84,6 +92,9 @@ choice
 	config DEFAULT_NOOP
 		bool "No-op"
 
+	config DEFAULT_SIO
+		bool "SIO" if IOSCHED_SIO=y
+
 endchoice
 
 config DEFAULT_IOSCHED
@@ -92,6 +103,7 @@ config DEFAULT_IOSCHED
 	default "cfq" if DEFAULT_CFQ
 	default "bfq" if DEFAULT_BFQ
 	default "noop" if DEFAULT_NOOP
+	default "sio" if DEFAULT_SIO
 
 endmenu
 
