@@ -58,16 +58,16 @@
 
 #include "clock.h"
 
-#define PCM_BUFFER_MAX_SIZE_ORDER	PAGE_SHIFT
+#define PCM_BUFFER_MAX_SIZE_ORDER	(14) // 2^^14 == 16K
 
 #define TEGRA_AUDIO_DSP_NONE		0
 #define TEGRA_AUDIO_DSP_PCM		1
 #define TEGRA_AUDIO_DSP_NETWORK		2
 #define TEGRA_AUDIO_DSP_TDM		3
 
-#define I2S_MAX_NUM_BUFS 4
-#define I2S_DEFAULT_TX_NUM_BUFS 2
-#define I2S_DEFAULT_RX_NUM_BUFS 2
+#define I2S_MAX_NUM_BUFS 16
+#define I2S_DEFAULT_TX_NUM_BUFS 12
+#define I2S_DEFAULT_RX_NUM_BUFS 4
 
 /* per stream (input/output) */
 struct audio_stream {
@@ -835,7 +835,7 @@ static void dma_tx_complete_callback(struct tegra_dma_req *req)
 	complete(&aos->comp[req_num]);
 
 	if (!pending_buffer_requests(aos)) {
-		pr_debug("%s: Playback underflow\n", __func__);
+		pr_info("tegra_i2s_audio: %s: Playback underflow\n", __func__);
 		complete(&aos->stop_completion);
 	}
 

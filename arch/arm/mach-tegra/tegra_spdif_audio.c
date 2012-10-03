@@ -57,12 +57,12 @@
 
 #include "clock.h"
 
-#define PCM_BUFFER_MAX_SIZE_ORDER	(PAGE_SHIFT)
+#define PCM_BUFFER_MAX_SIZE_ORDER	(14) // 2^^14 == 16K
 
-#define SPDIF_MAX_NUM_BUFS 4
+#define SPDIF_MAX_NUM_BUFS 16
 /* Todo: Add IOCTL to configure the number of buffers. */
-#define SPDIF_DEFAULT_TX_NUM_BUFS 2
-#define SPDIF_DEFAULT_RX_NUM_BUFS 2
+#define SPDIF_DEFAULT_TX_NUM_BUFS 12
+#define SPDIF_DEFAULT_RX_NUM_BUFS 4
 /* per stream (input/output) */
 struct audio_stream {
 	int opened;
@@ -549,7 +549,7 @@ static void dma_tx_complete_callback(struct tegra_dma_req *req)
 	complete(&aos->comp[req_num]);
 
 	if (!pending_buffer_requests(aos)) {
-		pr_debug("%s: Playback underflow", __func__);
+		pr_info("tegra_spdif_audio: %s: Playback underflow", __func__);
 		complete(&aos->stop_completion);
 	}
 }
