@@ -57,7 +57,7 @@
 
 #include "clock.h"
 
-#define PCM_BUFFER_MAX_SIZE_ORDER	(14) // 2^^14 == 16K
+#define PCM_BUFFER_MAX_SIZE_ORDER	(PAGE_SHIFT)
 
 #define SPDIF_MAX_NUM_BUFS 16
 /* Todo: Add IOCTL to configure the number of buffers. */
