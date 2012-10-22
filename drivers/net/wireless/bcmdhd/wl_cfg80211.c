@@ -1587,7 +1587,6 @@ __wl_cfg80211_scan(struct wiphy *wiphy, struct net_device *ndev,
 	/* Arm scan timeout timer */
 	mod_timer(&wl->scan_timeout, jiffies + msecs_to_jiffies(WL_SCAN_TIMER_INTERVAL_MS));
 	iscan_req = false;
-	wl->scan_request = request;
 	if (request) {		/* scan bss */
 		ssids = request->ssids;
 		if (wl->iscan_on && (!ssids || !ssids->ssid_len || request->n_ssids != 1)) {
@@ -1668,6 +1667,7 @@ __wl_cfg80211_scan(struct wiphy *wiphy, struct net_device *ndev,
 		/* we don't do iscan in ibss */
 		ssids = this_ssid;
 	}
+	wl->scan_request = request;
 	wl_set_drv_status(wl, SCANNING, ndev);
 	if (iscan_req) {
 		err = wl_do_iscan(wl, request);
